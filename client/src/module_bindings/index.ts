@@ -36,6 +36,8 @@ import { AddDrawingPoint } from "./add_drawing_point_reducer.ts";
 export { AddDrawingPoint };
 import { ClearCanvas } from "./clear_canvas_reducer.ts";
 export { ClearCanvas };
+import { DeleteCanvasState } from "./delete_canvas_state_reducer.ts";
+export { DeleteCanvasState };
 import { ErasePoints } from "./erase_points_reducer.ts";
 export { ErasePoints };
 import { IdentityConnected } from "./identity_connected_reducer.ts";
@@ -101,6 +103,10 @@ const REMOTE_MODULE = {
       reducerName: "clear_canvas",
       argsType: ClearCanvas.getTypeScriptAlgebraicType(),
     },
+    delete_canvas_state: {
+      reducerName: "delete_canvas_state",
+      argsType: DeleteCanvasState.getTypeScriptAlgebraicType(),
+    },
     erase_points: {
       reducerName: "erase_points",
       argsType: ErasePoints.getTypeScriptAlgebraicType(),
@@ -154,6 +160,7 @@ const REMOTE_MODULE = {
 export type Reducer = never
 | { name: "AddDrawingPoint", args: AddDrawingPoint }
 | { name: "ClearCanvas", args: ClearCanvas }
+| { name: "DeleteCanvasState", args: DeleteCanvasState }
 | { name: "ErasePoints", args: ErasePoints }
 | { name: "IdentityConnected", args: IdentityConnected }
 | { name: "IdentityDisconnected", args: IdentityDisconnected }
@@ -191,6 +198,22 @@ export class RemoteReducers {
 
   removeOnClearCanvas(callback: (ctx: ReducerEventContext) => void) {
     this.connection.offReducer("clear_canvas", callback);
+  }
+
+  deleteCanvasState(stateId: bigint) {
+    const __args = { stateId };
+    let __writer = new BinaryWriter(1024);
+    DeleteCanvasState.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("delete_canvas_state", __argsBuffer, this.setCallReducerFlags.deleteCanvasStateFlags);
+  }
+
+  onDeleteCanvasState(callback: (ctx: ReducerEventContext, stateId: bigint) => void) {
+    this.connection.onReducer("delete_canvas_state", callback);
+  }
+
+  removeOnDeleteCanvasState(callback: (ctx: ReducerEventContext, stateId: bigint) => void) {
+    this.connection.offReducer("delete_canvas_state", callback);
   }
 
   erasePoints(x: number, y: number, radius: number) {
@@ -284,6 +307,11 @@ export class SetReducerFlags {
   clearCanvasFlags: CallReducerFlags = 'FullUpdate';
   clearCanvas(flags: CallReducerFlags) {
     this.clearCanvasFlags = flags;
+  }
+
+  deleteCanvasStateFlags: CallReducerFlags = 'FullUpdate';
+  deleteCanvasState(flags: CallReducerFlags) {
+    this.deleteCanvasStateFlags = flags;
   }
 
   erasePointsFlags: CallReducerFlags = 'FullUpdate';

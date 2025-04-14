@@ -198,3 +198,38 @@ pub fn load_canvas_state(ctx: &ReducerContext, state_id: u64) {
         );
     }
 }
+
+#[reducer]
+// Deletes a saved canvas state by its ID
+pub fn delete_canvas_state(ctx: &ReducerContext, state_id: u64) {
+    // Check if the state exists
+    if let Some(state) = ctx.db.canvas_state().id().find(state_id) {
+        // Only allow deletion by the creator or if the state exists
+        if state.created_by == ctx.sender {
+            // Store the name before deleting
+            let state_name = state.name.clone();
+
+            // Delete all saved points associated with this state
+            let points_to_delete: Vec<SavedCanvasPoint> = ctx
+                .db
+                .saved_canvas_point()
+                .iter()
+                .filter(|p| p.state_id == state_id)
+                .collect();
+
+            for point in points_to_delete {
+                ctx.db.saved_canvas_point().delete(point);
+            }
+
+            // Delete the state itself
+            ctx.db.canvas_state().delete(state);
+
+            log::info!(
+                "User {} deleted canvas state {} ({})",
+                ctx.sender,
+                state_id,
+                state_name
+            );
+        }
+    }
+}

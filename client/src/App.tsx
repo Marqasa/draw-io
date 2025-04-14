@@ -106,9 +106,16 @@ function useCanvasStates(conn: DbConnection | null): CanvasState[] {
     }
     conn.db.canvasState.onInsert(onInsert)
 
+    // Handle state deletions
+    const onDelete = (_ctx: EventContext, state: CanvasState) => {
+      setStates((prev) => prev.filter((s) => s.id !== state.id))
+    }
+    conn.db.canvasState.onDelete(onDelete)
+
     // Clean up
     return () => {
       conn.db.canvasState.removeOnInsert(onInsert)
+      conn.db.canvasState.removeOnDelete(onDelete)
     }
   }, [conn])
 
@@ -142,6 +149,8 @@ function App() {
     message: string
     visible: boolean
   }>({ message: "", visible: false })
+  const [deleteWarningOpen, setDeleteWarningOpen] = useState<boolean>(false)
+  const [stateToDelete, setStateToDelete] = useState<CanvasState | null>(null)
 
   useEffect(() => {
     // Helper function to subscribe to database queries
@@ -285,6 +294,34 @@ function App() {
     setStateToLoad(null)
   }
 
+  const handleDeleteStateClick = (
+    event: React.MouseEvent,
+    state: CanvasState
+  ) => {
+    event.stopPropagation() // Prevent triggering the parent click event (load)
+    setStateToDelete(state)
+    setDeleteWarningOpen(true)
+  }
+
+  const handleDeleteState = () => {
+    if (!conn || !stateToDelete) return
+    conn.reducers.deleteCanvasState(BigInt(stateToDelete.id))
+    setDeleteWarningOpen(false)
+
+    // Show notification
+    setNotification({
+      message: `Deleted canvas: ${stateToDelete.name}`,
+      visible: true,
+    })
+
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification((prev) => ({ ...prev, visible: false }))
+    }, 3000)
+
+    setStateToDelete(null)
+  }
+
   // Draw all cursors and canvas points whenever they update
   useEffect(() => {
     const canvas = canvasRef.current
@@ -413,6 +450,27 @@ function App() {
         </div>
       )}
 
+      {deleteWarningOpen && stateToDelete && (
+        <div className="save-modal">
+          <div className="modal-content">
+            <h2>Delete Canvas</h2>
+            <p>Are you sure you want to delete "{stateToDelete.name}"?</p>
+            <p>This action cannot be undone.</p>
+            <div className="modal-buttons">
+              <button onClick={handleDeleteState}>Delete</button>
+              <button
+                onClick={() => {
+                  setDeleteWarningOpen(false)
+                  setStateToDelete(null)
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {notification.visible && (
         <div className="notification">{notification.message}</div>
       )}
@@ -425,6 +483,14 @@ function App() {
               <li key={state.id} onClick={() => handleLoadStateClick(state)}>
                 {state.name} (saved by{" "}
                 {state.createdBy.toHexString().substring(0, 8)}...)
+                {state.createdBy.toHexString() === identity.toHexString() && (
+                  <button
+                    className="delete-btn"
+                    onClick={(e) => handleDeleteStateClick(e, state)}
+                  >
+                    Delete
+                  </button>
+                )}
               </li>
             ))}
           </ul>

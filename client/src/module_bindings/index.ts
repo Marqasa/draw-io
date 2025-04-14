@@ -32,30 +32,79 @@ import {
 } from "@clockworklabs/spacetimedb-sdk";
 
 // Import and reexport all reducer arg types
+import { AddDrawingPoint } from "./add_drawing_point_reducer.ts";
+export { AddDrawingPoint };
+import { ClearCanvas } from "./clear_canvas_reducer.ts";
+export { ClearCanvas };
+import { ErasePoints } from "./erase_points_reducer.ts";
+export { ErasePoints };
 import { IdentityConnected } from "./identity_connected_reducer.ts";
 export { IdentityConnected };
 import { IdentityDisconnected } from "./identity_disconnected_reducer.ts";
 export { IdentityDisconnected };
+import { LoadCanvasState } from "./load_canvas_state_reducer.ts";
+export { LoadCanvasState };
+import { SaveCanvasState } from "./save_canvas_state_reducer.ts";
+export { SaveCanvasState };
 import { UpdateCursor } from "./update_cursor_reducer.ts";
 export { UpdateCursor };
 
 // Import and reexport all table handle types
+import { CanvasPointTableHandle } from "./canvas_point_table.ts";
+export { CanvasPointTableHandle };
+import { CanvasStateTableHandle } from "./canvas_state_table.ts";
+export { CanvasStateTableHandle };
 import { CursorTableHandle } from "./cursor_table.ts";
 export { CursorTableHandle };
+import { SavedCanvasPointTableHandle } from "./saved_canvas_point_table.ts";
+export { SavedCanvasPointTableHandle };
 
 // Import and reexport all types
+import { CanvasPoint } from "./canvas_point_type.ts";
+export { CanvasPoint };
+import { CanvasState } from "./canvas_state_type.ts";
+export { CanvasState };
 import { Cursor } from "./cursor_type.ts";
 export { Cursor };
+import { SavedCanvasPoint } from "./saved_canvas_point_type.ts";
+export { SavedCanvasPoint };
 
 const REMOTE_MODULE = {
   tables: {
+    canvas_point: {
+      tableName: "canvas_point",
+      rowType: CanvasPoint.getTypeScriptAlgebraicType(),
+      primaryKey: "id",
+    },
+    canvas_state: {
+      tableName: "canvas_state",
+      rowType: CanvasState.getTypeScriptAlgebraicType(),
+      primaryKey: "id",
+    },
     cursor: {
       tableName: "cursor",
       rowType: Cursor.getTypeScriptAlgebraicType(),
       primaryKey: "identity",
     },
+    saved_canvas_point: {
+      tableName: "saved_canvas_point",
+      rowType: SavedCanvasPoint.getTypeScriptAlgebraicType(),
+      primaryKey: "id",
+    },
   },
   reducers: {
+    add_drawing_point: {
+      reducerName: "add_drawing_point",
+      argsType: AddDrawingPoint.getTypeScriptAlgebraicType(),
+    },
+    clear_canvas: {
+      reducerName: "clear_canvas",
+      argsType: ClearCanvas.getTypeScriptAlgebraicType(),
+    },
+    erase_points: {
+      reducerName: "erase_points",
+      argsType: ErasePoints.getTypeScriptAlgebraicType(),
+    },
     identity_connected: {
       reducerName: "identity_connected",
       argsType: IdentityConnected.getTypeScriptAlgebraicType(),
@@ -63,6 +112,14 @@ const REMOTE_MODULE = {
     identity_disconnected: {
       reducerName: "identity_disconnected",
       argsType: IdentityDisconnected.getTypeScriptAlgebraicType(),
+    },
+    load_canvas_state: {
+      reducerName: "load_canvas_state",
+      argsType: LoadCanvasState.getTypeScriptAlgebraicType(),
+    },
+    save_canvas_state: {
+      reducerName: "save_canvas_state",
+      argsType: SaveCanvasState.getTypeScriptAlgebraicType(),
     },
     update_cursor: {
       reducerName: "update_cursor",
@@ -95,13 +152,62 @@ const REMOTE_MODULE = {
 
 // A type representing all the possible variants of a reducer.
 export type Reducer = never
+| { name: "AddDrawingPoint", args: AddDrawingPoint }
+| { name: "ClearCanvas", args: ClearCanvas }
+| { name: "ErasePoints", args: ErasePoints }
 | { name: "IdentityConnected", args: IdentityConnected }
 | { name: "IdentityDisconnected", args: IdentityDisconnected }
+| { name: "LoadCanvasState", args: LoadCanvasState }
+| { name: "SaveCanvasState", args: SaveCanvasState }
 | { name: "UpdateCursor", args: UpdateCursor }
 ;
 
 export class RemoteReducers {
   constructor(private connection: DbConnectionImpl, private setCallReducerFlags: SetReducerFlags) {}
+
+  addDrawingPoint(x: number, y: number, color: string, size: number) {
+    const __args = { x, y, color, size };
+    let __writer = new BinaryWriter(1024);
+    AddDrawingPoint.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("add_drawing_point", __argsBuffer, this.setCallReducerFlags.addDrawingPointFlags);
+  }
+
+  onAddDrawingPoint(callback: (ctx: ReducerEventContext, x: number, y: number, color: string, size: number) => void) {
+    this.connection.onReducer("add_drawing_point", callback);
+  }
+
+  removeOnAddDrawingPoint(callback: (ctx: ReducerEventContext, x: number, y: number, color: string, size: number) => void) {
+    this.connection.offReducer("add_drawing_point", callback);
+  }
+
+  clearCanvas() {
+    this.connection.callReducer("clear_canvas", new Uint8Array(0), this.setCallReducerFlags.clearCanvasFlags);
+  }
+
+  onClearCanvas(callback: (ctx: ReducerEventContext) => void) {
+    this.connection.onReducer("clear_canvas", callback);
+  }
+
+  removeOnClearCanvas(callback: (ctx: ReducerEventContext) => void) {
+    this.connection.offReducer("clear_canvas", callback);
+  }
+
+  erasePoints(x: number, y: number, radius: number) {
+    const __args = { x, y, radius };
+    let __writer = new BinaryWriter(1024);
+    ErasePoints.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("erase_points", __argsBuffer, this.setCallReducerFlags.erasePointsFlags);
+  }
+
+  onErasePoints(callback: (ctx: ReducerEventContext, x: number, y: number, radius: number) => void) {
+    this.connection.onReducer("erase_points", callback);
+  }
+
+  removeOnErasePoints(callback: (ctx: ReducerEventContext, x: number, y: number, radius: number) => void) {
+    this.connection.offReducer("erase_points", callback);
+  }
 
   onIdentityConnected(callback: (ctx: ReducerEventContext) => void) {
     this.connection.onReducer("identity_connected", callback);
@@ -117,6 +223,38 @@ export class RemoteReducers {
 
   removeOnIdentityDisconnected(callback: (ctx: ReducerEventContext) => void) {
     this.connection.offReducer("identity_disconnected", callback);
+  }
+
+  loadCanvasState(stateId: bigint) {
+    const __args = { stateId };
+    let __writer = new BinaryWriter(1024);
+    LoadCanvasState.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("load_canvas_state", __argsBuffer, this.setCallReducerFlags.loadCanvasStateFlags);
+  }
+
+  onLoadCanvasState(callback: (ctx: ReducerEventContext, stateId: bigint) => void) {
+    this.connection.onReducer("load_canvas_state", callback);
+  }
+
+  removeOnLoadCanvasState(callback: (ctx: ReducerEventContext, stateId: bigint) => void) {
+    this.connection.offReducer("load_canvas_state", callback);
+  }
+
+  saveCanvasState(name: string) {
+    const __args = { name };
+    let __writer = new BinaryWriter(1024);
+    SaveCanvasState.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("save_canvas_state", __argsBuffer, this.setCallReducerFlags.saveCanvasStateFlags);
+  }
+
+  onSaveCanvasState(callback: (ctx: ReducerEventContext, name: string) => void) {
+    this.connection.onReducer("save_canvas_state", callback);
+  }
+
+  removeOnSaveCanvasState(callback: (ctx: ReducerEventContext, name: string) => void) {
+    this.connection.offReducer("save_canvas_state", callback);
   }
 
   updateCursor(x: number, y: number) {
@@ -138,6 +276,31 @@ export class RemoteReducers {
 }
 
 export class SetReducerFlags {
+  addDrawingPointFlags: CallReducerFlags = 'FullUpdate';
+  addDrawingPoint(flags: CallReducerFlags) {
+    this.addDrawingPointFlags = flags;
+  }
+
+  clearCanvasFlags: CallReducerFlags = 'FullUpdate';
+  clearCanvas(flags: CallReducerFlags) {
+    this.clearCanvasFlags = flags;
+  }
+
+  erasePointsFlags: CallReducerFlags = 'FullUpdate';
+  erasePoints(flags: CallReducerFlags) {
+    this.erasePointsFlags = flags;
+  }
+
+  loadCanvasStateFlags: CallReducerFlags = 'FullUpdate';
+  loadCanvasState(flags: CallReducerFlags) {
+    this.loadCanvasStateFlags = flags;
+  }
+
+  saveCanvasStateFlags: CallReducerFlags = 'FullUpdate';
+  saveCanvasState(flags: CallReducerFlags) {
+    this.saveCanvasStateFlags = flags;
+  }
+
   updateCursorFlags: CallReducerFlags = 'FullUpdate';
   updateCursor(flags: CallReducerFlags) {
     this.updateCursorFlags = flags;
@@ -148,8 +311,20 @@ export class SetReducerFlags {
 export class RemoteTables {
   constructor(private connection: DbConnectionImpl) {}
 
+  get canvasPoint(): CanvasPointTableHandle {
+    return new CanvasPointTableHandle(this.connection.clientCache.getOrCreateTable<CanvasPoint>(REMOTE_MODULE.tables.canvas_point));
+  }
+
+  get canvasState(): CanvasStateTableHandle {
+    return new CanvasStateTableHandle(this.connection.clientCache.getOrCreateTable<CanvasState>(REMOTE_MODULE.tables.canvas_state));
+  }
+
   get cursor(): CursorTableHandle {
     return new CursorTableHandle(this.connection.clientCache.getOrCreateTable<Cursor>(REMOTE_MODULE.tables.cursor));
+  }
+
+  get savedCanvasPoint(): SavedCanvasPointTableHandle {
+    return new SavedCanvasPointTableHandle(this.connection.clientCache.getOrCreateTable<SavedCanvasPoint>(REMOTE_MODULE.tables.saved_canvas_point));
   }
 }
 

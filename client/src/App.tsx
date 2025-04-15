@@ -407,7 +407,7 @@ function App() {
     })
 
     // Draw all cursors (skip during replay)
-    if (!isReplaying) {
+    if (!isReplaying || isReplayPaused) {
       cursors.forEach((cursor, id) => {
         ctx.beginPath()
         if (id === identity?.toHexString()) {

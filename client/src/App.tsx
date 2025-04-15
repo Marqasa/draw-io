@@ -151,6 +151,69 @@ function App() {
   const [deleteWarningOpen, setDeleteWarningOpen] = useState<boolean>(false)
   const [stateToDelete, setStateToDelete] = useState<CanvasState | null>(null)
 
+  // Replay state
+  const [isReplaying, setIsReplaying] = useState<boolean>(false)
+  const [replayIndex, setReplayIndex] = useState<number>(0)
+  const [isReplayPaused, setIsReplayPaused] = useState<boolean>(false)
+  const [replaySpeed, setReplaySpeed] = useState<number>(1) // 1x speed by default
+  const replayTimerRef = useRef<number | null>(null)
+
+  // Sort points by timestamp for replay
+  const sortedPoints = [...canvasPoints].sort((a, b) => {
+    return a.timestamp.toDate().getTime() - b.timestamp.toDate().getTime()
+  })
+
+  // On load or when points change, go to end
+  useEffect(() => {
+    setReplayIndex(sortedPoints.length)
+  }, [sortedPoints.length])
+
+  // Replay logic
+  const handlePlayPause = () => {
+    if (!isReplaying || isReplayPaused) {
+      // Start or resume
+      if (replayIndex >= sortedPoints.length) {
+        setReplayIndex(0)
+      }
+      setIsReplaying(true)
+      setIsReplayPaused(false)
+    } else {
+      // Pause
+      setIsReplayPaused(true)
+    }
+  }
+
+  // Animate replay
+  useEffect(() => {
+    if (!isReplaying || isReplayPaused) {
+      if (replayTimerRef.current) {
+        clearTimeout(replayTimerRef.current)
+        replayTimerRef.current = null
+      }
+      return
+    }
+    if (replayIndex >= sortedPoints.length) {
+      setIsReplaying(false)
+      return
+    }
+    // 50 points per second at 1x speed => 20ms per point
+    // Adjust interval by speed
+    const baseInterval = 20 // ms
+    const interval = baseInterval / replaySpeed
+    replayTimerRef.current = setTimeout(() => {
+      setReplayIndex((idx) => idx + 1)
+    }, interval)
+    return () => {
+      if (replayTimerRef.current) clearTimeout(replayTimerRef.current)
+    }
+  }, [
+    isReplaying,
+    isReplayPaused,
+    replayIndex,
+    sortedPoints.length,
+    replaySpeed,
+  ])
+
   useEffect(() => {
     // Helper function to subscribe to database queries
     const subscribeToQueries = (conn: DbConnection, queries: string[]) => {
@@ -332,32 +395,37 @@ function App() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    // Draw all canvas points
-    canvasPoints.forEach((point) => {
+    // Draw all canvas points (or up to replayIndex if replaying)
+    const pointsToDraw = isReplaying
+      ? sortedPoints.slice(0, replayIndex)
+      : canvasPoints
+    pointsToDraw.forEach((point) => {
       ctx.beginPath()
       ctx.arc(point.x, point.y, point.size, 0, 2 * Math.PI)
       ctx.fillStyle = point.color
       ctx.fill()
     })
 
-    // Draw all cursors
-    cursors.forEach((cursor, id) => {
-      ctx.beginPath()
-      if (id === identity?.toHexString()) {
-        // Current user's cursor shows their brush settings with full opacity
-        ctx.arc(cursor.x, cursor.y, cursor.size, 0, 2 * Math.PI)
-        ctx.fillStyle = cursor.color
-        ctx.fill()
-      } else {
-        // Other users' cursors show their brush settings with reduced opacity
-        ctx.arc(cursor.x, cursor.y, cursor.size, 0, 2 * Math.PI)
-        ctx.fillStyle = cursor.color
-        ctx.globalAlpha = 0.3 // Make other users' cursors semi-transparent
-        ctx.fill()
-        ctx.globalAlpha = 1.0 // Reset alpha
-      }
-    })
-  }, [cursors, canvasPoints, identity])
+    // Draw all cursors (skip during replay)
+    if (!isReplaying) {
+      cursors.forEach((cursor, id) => {
+        ctx.beginPath()
+        if (id === identity?.toHexString()) {
+          // Current user's cursor shows their brush settings with full opacity
+          ctx.arc(cursor.x, cursor.y, cursor.size, 0, 2 * Math.PI)
+          ctx.fillStyle = cursor.color
+          ctx.fill()
+        } else {
+          // Other users' cursors show their brush settings with reduced opacity
+          ctx.arc(cursor.x, cursor.y, cursor.size, 0, 2 * Math.PI)
+          ctx.fillStyle = cursor.color
+          ctx.globalAlpha = 0.3 // Make other users' cursors semi-transparent
+          ctx.fill()
+          ctx.globalAlpha = 1.0 // Reset alpha
+        }
+      })
+    }
+  }, [cursors, canvasPoints, identity, isReplaying, replayIndex, sortedPoints])
 
   // Show loading screen while connecting
   if (!conn || !connected || !identity) {
@@ -395,6 +463,71 @@ function App() {
         <button onClick={() => setSaveModalOpen(true)}>Save Canvas</button>
 
         <button onClick={handleClearCanvas}>Clear Canvas</button>
+
+        <div className="replay-controls">
+          <button
+            onClick={() => {
+              setReplayIndex(0)
+              setIsReplayPaused(true)
+              setIsReplaying(true)
+            }}
+            disabled={replayIndex === 0}
+            title="Go to start"
+            style={{ marginRight: 6 }}
+          >
+            ⏮️
+          </button>
+          <button
+            onClick={handlePlayPause}
+            disabled={sortedPoints.length === 0}
+            title={isReplaying && !isReplayPaused ? "Pause" : "Play"}
+            style={{ marginRight: 6 }}
+          >
+            {isReplaying && !isReplayPaused ? "⏸️" : "▶️"}
+          </button>
+          <button
+            onClick={() => {
+              setReplayIndex(sortedPoints.length)
+              setIsReplayPaused(true)
+              setIsReplaying(false)
+            }}
+            disabled={replayIndex === sortedPoints.length}
+            title="Go to end"
+            style={{ marginRight: 6 }}
+          >
+            ⏭️
+          </button>
+          {/* Replay speed selector */}
+          <label style={{ marginLeft: 12, marginRight: 4 }}>Speed:</label>
+          <select
+            value={replaySpeed}
+            onChange={(e) => setReplaySpeed(Number(e.target.value))}
+            style={{ marginRight: 12 }}
+          >
+            <option value={0.25}>0.25x</option>
+            <option value={0.5}>0.5x</option>
+            <option value={1}>1x</option>
+            <option value={2}>2x</option>
+            <option value={4}>4x</option>
+          </select>
+          {/* Scrub bar for replay */}
+          <input
+            type="range"
+            min={0}
+            max={sortedPoints.length}
+            value={replayIndex}
+            onChange={(e) => {
+              setReplayIndex(Number(e.target.value))
+              setIsReplayPaused(true)
+              setIsReplaying(true)
+            }}
+            style={{ marginLeft: 0, marginRight: 12, width: 200 }}
+            disabled={sortedPoints.length === 0}
+          />
+          <span style={{ marginLeft: 8 }}>
+            {replayIndex} / {sortedPoints.length}
+          </span>
+        </div>
       </div>
 
       <canvas

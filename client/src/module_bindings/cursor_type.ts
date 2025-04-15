@@ -34,6 +34,8 @@ export type Cursor = {
   identity: Identity,
   x: number,
   y: number,
+  color: string,
+  size: number,
   lastUpdated: Timestamp,
 };
 
@@ -50,6 +52,8 @@ export namespace Cursor {
       new ProductTypeElement("identity", AlgebraicType.createIdentityType()),
       new ProductTypeElement("x", AlgebraicType.createF32Type()),
       new ProductTypeElement("y", AlgebraicType.createF32Type()),
+      new ProductTypeElement("color", AlgebraicType.createStringType()),
+      new ProductTypeElement("size", AlgebraicType.createF32Type()),
       new ProductTypeElement("lastUpdated", AlgebraicType.createTimestampType()),
     ]);
   }

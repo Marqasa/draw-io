@@ -1,12 +1,14 @@
 use spacetimedb::{reducer, table, Identity, ReducerContext, Table, Timestamp};
 
 #[table(name = cursor, public)]
-// Cursor table definition - tracks user cursor positions
+// Cursor table definition - tracks user cursor positions and brush settings
 pub struct Cursor {
     #[primary_key]
     identity: Identity,
     x: f32,
     y: f32,
+    color: String, // Current brush color
+    size: f32,     // Current brush size
     last_updated: Timestamp,
 }
 
@@ -56,6 +58,8 @@ pub fn identity_connected(ctx: &ReducerContext) {
         identity: ctx.sender,
         x: 0.0,
         y: 0.0,
+        color: "#000000".to_string(), // Default color
+        size: 3.0,                    // Default size
         last_updated: ctx.timestamp,
     });
 }
@@ -70,12 +74,14 @@ pub fn identity_disconnected(ctx: &ReducerContext) {
 }
 
 #[reducer]
-// Updates a user's cursor position
-pub fn update_cursor(ctx: &ReducerContext, x: f32, y: f32) {
+// Updates a user's cursor position and brush settings
+pub fn update_cursor(ctx: &ReducerContext, x: f32, y: f32, color: String, size: f32) {
     if let Some(cursor) = ctx.db.cursor().identity().find(ctx.sender) {
         ctx.db.cursor().identity().update(Cursor {
             x,
             y,
+            color,
+            size,
             last_updated: ctx.timestamp,
             ..cursor
         });

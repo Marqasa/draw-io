@@ -280,19 +280,19 @@ export class RemoteReducers {
     this.connection.offReducer("save_canvas_state", callback);
   }
 
-  updateCursor(x: number, y: number) {
-    const __args = { x, y };
+  updateCursor(x: number, y: number, color: string, size: number) {
+    const __args = { x, y, color, size };
     let __writer = new BinaryWriter(1024);
     UpdateCursor.getTypeScriptAlgebraicType().serialize(__writer, __args);
     let __argsBuffer = __writer.getBuffer();
     this.connection.callReducer("update_cursor", __argsBuffer, this.setCallReducerFlags.updateCursorFlags);
   }
 
-  onUpdateCursor(callback: (ctx: ReducerEventContext, x: number, y: number) => void) {
+  onUpdateCursor(callback: (ctx: ReducerEventContext, x: number, y: number, color: string, size: number) => void) {
     this.connection.onReducer("update_cursor", callback);
   }
 
-  removeOnUpdateCursor(callback: (ctx: ReducerEventContext, x: number, y: number) => void) {
+  removeOnUpdateCursor(callback: (ctx: ReducerEventContext, x: number, y: number, color: string, size: number) => void) {
     this.connection.offReducer("update_cursor", callback);
   }
 

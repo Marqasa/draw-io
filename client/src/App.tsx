@@ -237,8 +237,8 @@ function App() {
     const x = event.clientX - rect.left
     const y = event.clientY - rect.top
 
-    // Update cursor position
-    conn.reducers.updateCursor(x, y)
+    // Update cursor position with current brush settings
+    conn.reducers.updateCursor(x, y, brushColor, brushSize)
 
     // Add drawing point if currently drawing
     if (isDrawing) {
@@ -344,9 +344,19 @@ function App() {
     // Draw all cursors
     cursors.forEach((cursor, id) => {
       ctx.beginPath()
-      ctx.arc(cursor.x, cursor.y, 5, 0, 2 * Math.PI)
-      ctx.fillStyle = id === identity?.toHexString() ? "#ff0000" : "#0000ff"
-      ctx.fill()
+      if (id === identity?.toHexString()) {
+        // Current user's cursor shows their brush settings with full opacity
+        ctx.arc(cursor.x, cursor.y, cursor.size, 0, 2 * Math.PI)
+        ctx.fillStyle = cursor.color
+        ctx.fill()
+      } else {
+        // Other users' cursors show their brush settings with reduced opacity
+        ctx.arc(cursor.x, cursor.y, cursor.size, 0, 2 * Math.PI)
+        ctx.fillStyle = cursor.color
+        ctx.globalAlpha = 0.3 // Make other users' cursors semi-transparent
+        ctx.fill()
+        ctx.globalAlpha = 1.0 // Reset alpha
+      }
     })
   }, [cursors, canvasPoints, identity])
 

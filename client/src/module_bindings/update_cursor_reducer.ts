@@ -34,6 +34,8 @@ import {
 export type UpdateCursor = {
   x: number,
   y: number,
+  color: string,
+  size: number,
 };
 
 /**
@@ -48,6 +50,8 @@ export namespace UpdateCursor {
     return AlgebraicType.createProductType([
       new ProductTypeElement("x", AlgebraicType.createF32Type()),
       new ProductTypeElement("y", AlgebraicType.createF32Type()),
+      new ProductTypeElement("color", AlgebraicType.createStringType()),
+      new ProductTypeElement("size", AlgebraicType.createF32Type()),
     ]);
   }
 

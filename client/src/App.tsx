@@ -14,38 +14,36 @@ import "./App.css"
  * Custom hook to manage cursor state from the database
  * Tracks cursor positions of all connected users
  */
-function useCursors(conn: DbConnection | null): Map<string, Cursor> {
-  const [cursors, setCursors] = useState<Map<string, Cursor>>(new Map())
+function useCursors(conn: DbConnection | null): Cursor[] {
+  const [cursors, setCursors] = useState<Cursor[]>([])
 
   useEffect(() => {
     if (!conn) return
     // Handle new cursor insertions
     const onInsert = (_ctx: EventContext, cursor: Cursor) => {
-      setCursors(
-        (prev) => new Map(prev.set(cursor.identity.toHexString(), cursor))
-      )
+      setCursors((prev) => [...prev, cursor])
     }
     conn.db.cursor.onInsert(onInsert)
 
-    // Handle cursor position updates
-    const onUpdate = (
-      _ctx: EventContext,
-      oldCursor: Cursor,
-      newCursor: Cursor
-    ) => {
-      setCursors((prev) => {
-        prev.delete(oldCursor.identity.toHexString())
-        return new Map(prev.set(newCursor.identity.toHexString(), newCursor))
-      })
+    // Handle cursor updates
+    const onUpdate = (_ctx: EventContext, cursor: Cursor) => {
+      setCursors((prev) =>
+        prev.map((c) =>
+          c.identity.toHexString() === cursor.identity.toHexString()
+            ? cursor
+            : c
+        )
+      )
     }
     conn.db.cursor.onUpdate(onUpdate)
 
     // Handle cursor deletions when users disconnect
     const onDelete = (_ctx: EventContext, cursor: Cursor) => {
-      setCursors((prev) => {
-        prev.delete(cursor.identity.toHexString())
-        return new Map(prev)
-      })
+      setCursors((prev) =>
+        prev.filter(
+          (c) => c.identity.toHexString() !== cursor.identity.toHexString()
+        )
+      )
     }
     conn.db.cursor.onDelete(onDelete)
 
@@ -408,9 +406,9 @@ function App() {
 
     // Draw all cursors (skip during replay)
     if (!isReplaying || isReplayPaused) {
-      cursors.forEach((cursor, id) => {
+      cursors.forEach((cursor) => {
         ctx.beginPath()
-        if (id === identity?.toHexString()) {
+        if (cursor.identity.toHexString() === identity?.toHexString()) {
           // Current user's cursor shows their brush settings with full opacity
           ctx.arc(cursor.x, cursor.y, cursor.size, 0, 2 * Math.PI)
           ctx.fillStyle = cursor.color
@@ -425,7 +423,15 @@ function App() {
         }
       })
     }
-  }, [cursors, canvasPoints, identity, isReplaying, replayIndex, sortedPoints])
+  }, [
+    canvasPoints,
+    cursors,
+    identity,
+    isReplaying,
+    isReplayPaused,
+    replayIndex,
+    sortedPoints,
+  ])
 
   // Show loading screen while connecting
   if (!conn || !connected || !identity) {

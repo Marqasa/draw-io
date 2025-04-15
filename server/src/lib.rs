@@ -14,7 +14,8 @@ pub struct Cursor {
 #[table(name = canvas_point, public)]
 pub struct CanvasPoint {
     #[primary_key]
-    id: u64, // Unique auto-incrementing ID
+    #[auto_inc]
+    id: u64,
     identity: Identity, // Who drew this point
     x: f32,
     y: f32,
@@ -27,7 +28,8 @@ pub struct CanvasPoint {
 #[table(name = canvas_state, public)]
 pub struct CanvasState {
     #[primary_key]
-    id: u64, // Unique ID for this saved state
+    #[auto_inc]
+    id: u64,
     name: String,         // Name of the saved state
     created_by: Identity, // Who created this save
     created_at: Timestamp,
@@ -37,7 +39,8 @@ pub struct CanvasState {
 #[table(name = saved_canvas_point, public)]
 pub struct SavedCanvasPoint {
     #[primary_key]
-    id: u64, // Unique ID for this saved point
+    #[auto_inc]
+    id: u64,
     state_id: u64, // References the state this point belongs to
     x: f32,
     y: f32,
@@ -82,11 +85,8 @@ pub fn update_cursor(ctx: &ReducerContext, x: f32, y: f32) {
 #[reducer]
 // Adds a new drawing point to the canvas
 pub fn add_drawing_point(ctx: &ReducerContext, x: f32, y: f32, color: String, size: f32) {
-    // Create a new point with auto-incrementing ID
-    let id = ctx.db.canvas_point().count() as u64 + 1;
-
     ctx.db.canvas_point().insert(CanvasPoint {
-        id,
+        id: 0, // Will be auto-incremented
         identity: ctx.sender,
         x,
         y,
@@ -119,29 +119,24 @@ pub fn erase_points(ctx: &ReducerContext, x: f32, y: f32, radius: f32) {
 #[reducer]
 // Saves the current canvas state with a given name
 pub fn save_canvas_state(ctx: &ReducerContext, name: String) {
-    let state_id = ctx.db.canvas_state().count() as u64 + 1;
-
     // Insert the state metadata
-    ctx.db.canvas_state().insert(CanvasState {
-        id: state_id,
+    let state = ctx.db.canvas_state().insert(CanvasState {
+        id: 0, // Will be auto-incremented
         name,
         created_by: ctx.sender,
         created_at: ctx.timestamp,
     });
 
     // Save all current canvas points with this state
-    let mut saved_point_id = ctx.db.saved_canvas_point().count() as u64 + 1;
-
     for point in ctx.db.canvas_point().iter() {
         ctx.db.saved_canvas_point().insert(SavedCanvasPoint {
-            id: saved_point_id,
-            state_id,
+            id: 0, // Will be auto-incremented
+            state_id: state.id,
             x: point.x,
             y: point.y,
             color: point.color.clone(),
             size: point.size,
         });
-        saved_point_id += 1;
     }
 }
 
@@ -174,11 +169,9 @@ pub fn load_canvas_state(ctx: &ReducerContext, state_id: u64) {
         let point_count = saved_points.len();
 
         // Recreate each saved point on the current canvas
-        let mut new_point_id = ctx.db.canvas_point().count() as u64 + 1;
-
         for saved_point in saved_points {
             ctx.db.canvas_point().insert(CanvasPoint {
-                id: new_point_id,
+                id: 0,                // Will be auto-incremented
                 identity: ctx.sender, // The person loading becomes the owner
                 x: saved_point.x,
                 y: saved_point.y,
@@ -186,7 +179,6 @@ pub fn load_canvas_state(ctx: &ReducerContext, state_id: u64) {
                 size: saved_point.size,
                 timestamp: ctx.timestamp,
             });
-            new_point_id += 1;
         }
 
         log::info!(

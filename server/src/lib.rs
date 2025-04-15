@@ -105,7 +105,7 @@ pub fn add_drawing_point(ctx: &ReducerContext, x: f32, y: f32, color: String, si
 #[reducer]
 // Erases points near the given coordinates
 pub fn erase_points(ctx: &ReducerContext, x: f32, y: f32, radius: f32) {
-    // Find all points within the eraser radius and delete them
+    // Remove a point if the eraser (brush) circle overlaps with the point's circle
     let points_to_erase: Vec<CanvasPoint> = ctx
         .db
         .canvas_point()
@@ -113,7 +113,9 @@ pub fn erase_points(ctx: &ReducerContext, x: f32, y: f32, radius: f32) {
         .filter(|point| {
             let dx = point.x - x;
             let dy = point.y - y;
-            (dx * dx + dy * dy) <= radius * radius
+            let dist_sq = dx * dx + dy * dy;
+            let combined_radius = radius + point.size;
+            dist_sq <= combined_radius * combined_radius
         })
         .collect();
 

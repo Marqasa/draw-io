@@ -140,7 +140,6 @@ function App() {
   const [isErasing, setIsErasing] = useState<boolean>(false)
   const [brushColor, setBrushColor] = useState<string>("#000000")
   const [brushSize, setBrushSize] = useState<number>(3)
-  const [eraserSize, setEraserSize] = useState<number>(10)
   const [saveModalOpen, setSaveModalOpen] = useState<boolean>(false)
   const [saveName, setSaveName] = useState<string>("")
   const [loadWarningOpen, setLoadWarningOpen] = useState<boolean>(false)
@@ -223,7 +222,7 @@ function App() {
     if (event.button === 2) {
       event.preventDefault() // Prevent context menu
       setIsErasing(true)
-      conn.reducers.erasePoints(x, y, eraserSize)
+      conn.reducers.erasePoints(x, y, brushSize)
     } else {
       setIsDrawing(true)
       conn.reducers.addDrawingPoint(x, y, brushColor, brushSize)
@@ -247,7 +246,7 @@ function App() {
 
     // Erase points if currently erasing
     if (isErasing) {
-      conn.reducers.erasePoints(x, y, eraserSize)
+      conn.reducers.erasePoints(x, y, brushSize)
     }
   }
 
@@ -390,17 +389,6 @@ function App() {
             max="20"
             value={brushSize}
             onChange={(e) => setBrushSize(parseInt(e.target.value))}
-          />
-        </div>
-
-        <div className="size-picker">
-          <label>Eraser Size:</label>
-          <input
-            type="range"
-            min="5"
-            max="50"
-            value={eraserSize}
-            onChange={(e) => setEraserSize(parseInt(e.target.value))}
           />
         </div>
 
